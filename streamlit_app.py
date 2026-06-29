@@ -40,17 +40,18 @@ if ingredients:
 # -------------------------
 if st.button("Submit") and name and ingredients:
 
-    # ⚠️ IMPORTANT: EXACT format (DORA depends on this)
     ingredients_string = ", ".join(ingredients)
 
-    sql = f"""
+    conn_raw = conn._conn
+    cur = conn_raw.cursor()
+
+    sql = """
     INSERT INTO SMOOTHIES.PUBLIC.ORDERS
     (NAME_ON_ORDER, INGREDIENTS, ORDER_FILLED)
-    VALUES
-    ('{name}', '{ingredients_string}', {str(order_filled).upper()})
+    VALUES (%s, %s, %s)
     """
 
-    session.sql(sql).collect()
+    cur.execute(sql, (name, ingredients_string, False))
 
     st.success("Order submitted 🍓")
 
