@@ -1,37 +1,36 @@
 import streamlit as st
-import snowflake.connector
+import pandas as pd
 
-conn = snowflake.connector.connect(
-    account=st.secrets["snowflake"]["account"],
-    user=st.secrets["snowflake"]["user"],
-    password=st.secrets["snowflake"]["password"],
-    role=st.secrets["snowflake"]["role"],
-    warehouse=st.secrets["snowflake"]["warehouse"],
-    database=st.secrets["snowflake"]["database"],
-    schema=st.secrets["snowflake"]["schema"]
-)
-
-cur = conn.cursor()
+conn = st.connection("snowflake")
+session = conn.session()
 
 st.title("Smoothie Orders 🍓")
 
 # Load fruits
-cur.execute("SELECT FRUIT_NAME FROM SMOOTHIES.PUBLIC.FRUIT_OPTIONS")
-fruit_list = [r[0] for r in cur.fetchall()]
+df = session.sql("SELECT FRUIT_NAME FROM SMOOTHIES.PUBLIC.FRUIT_OPTIONS").to_pandas()
+fruit_list = df["FRUIT_NAME"].tolist()
 
+# Inputs
 name = st.text_input("Name on order")
 
-ingredients = st.multiselect("Choose fruits", fruit_list, max_selections=5)
+ingredients = st.multiselect(
+    "Choose fruits",
+    fruit_list,
+    max_selections=5
+)
 
-# DORA SAFE STRING (IMPORTANT)
-ingredients_string = ",".join(ingredients)
+# Show selection
+if ingredients:
+    st.write("You selected:", ingredients)
 
-if st.button("Submit") and name and ingredients_string:
+# Submit
+if st.button("Submit") and name and ingredients:
 
-    sql = f"""
-    INSERT INTO SMOOTHIES.PUBLIC.ORDERS (NAME_ON_ORDER, INGREDIENTS)
-    VALUES ('{name}', '{ingredients_string}')
-    """
+    ingredients_string = ", ".join(ingredients)
 
-    cur.execute(sql)
-    st.success("Order submitted ✅")
+    session.sql(
+        "INSERT INTO SMOOTHIES.PUBLIC.ORDERS (NAME_ON_ORDER, INGREDIENTS) VALUES (?, ?)",
+        params=[name, ingredients_string]
+    ).collect()
+
+    st.success("Order submitted! 🍓")
