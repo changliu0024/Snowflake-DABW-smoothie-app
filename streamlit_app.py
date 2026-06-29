@@ -41,8 +41,7 @@ def get_order_status(name):
         return True
 
 def normalize_ingredients(items):
-    # ⭐ VERY IMPORTANT: remove ALL spaces after comma issues
-    return ",".join([i.strip() for i in items])
+    return ", ".join(items)
 
 # -------------------------
 # SUBMIT
