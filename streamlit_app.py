@@ -36,21 +36,27 @@ if ingredients:
 # -------------------------
 # Submit
 # -------------------------
-# 修复核心：确保插入了所有必需的列（特别是 ORDER_FILLED 和 ORDER_TS）
-# 使用 ? 占位符进行参数化查询，防止 SQL 注入和语法错误
-if st.button("Submit") and name and ingredients:
-
-    ingredients_string = ", ".join(ingredients)
-
-    # 构造 SQL，显式插入 ORDER_FILLED 为 FALSE (默认未完成)
-    # 并使用 CURRENT_TIMESTAMP() 填入时间戳
-    sql = """
-        INSERT INTO SMOOTHIES.PUBLIC.ORDERS 
-        (NAME_ON_ORDER, INGREDIENTS, ORDER_FILLED, ORDER_TS)
-        VALUES (?, ?, FALSE, CURRENT_TIMESTAMP())
-    """
-    
-    # 使用 session.sql 配合 collect() 执行，通过元组传入参数
-    session.sql(sql, params=(name, ingredients_string)).collect()
-
-    st.success(f"Order for {name} submitted 🍓")
+if st.button("Submit"):
+    if not name or not ingredients:
+        st.error("请确保输入了名字并选择了水果。")
+    else:
+        ingredients_string = ", ".join(ingredients)
+        
+        # 修复 SQL：只插入 NAME 和 INGREDIENTS
+        # ORDER_UID 使用 DEFAULT (自动序列)
+        # ORDER_FILLED 使用 FALSE (默认值)
+        # ORDER_TS 使用 CURRENT_TIMESTAMP (默认值)
+        
+        sql = """
+            INSERT INTO SMOOTHIES.PUBLIC.ORDERS 
+            (NAME_ON_ORDER, INGREDIENTS)
+            VALUES (?, ?)
+        """
+        
+        try:
+            # 执行查询
+            session.sql(sql, params=(name, ingredients_string)).collect()
+            st.success(f"订单已为 {name} 成功提交! 🍓")
+        except Exception as e:
+            # 打印详细错误方便排查
+            st.error(f"插入失败: {e}")
