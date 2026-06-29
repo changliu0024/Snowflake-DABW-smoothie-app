@@ -10,7 +10,7 @@ session = conn.session()
 st.title("Smoothie Orders 🍓")
 
 # -------------------------
-# Load fruit list
+# Load fruits
 # -------------------------
 df = session.sql("""
     SELECT FRUIT_NAME
@@ -30,30 +30,52 @@ ingredients = st.multiselect(
     max_selections=5
 )
 
-if ingredients:
-    st.write("You selected:", ingredients)
+st.write("You selected:", ingredients)
 
 # -------------------------
-# Submit
+# Submit order
 # -------------------------
 if st.button("Submit"):
 
-    if not name or not ingredients:
-        st.error("Please enter name and select fruits.")
+    if not name or len(ingredients) == 0:
+        st.error("Please enter name and select fruits")
     else:
 
-        # ⭐ DORA关键修复：必须严格加 ", "（逗号+空格）
-        ingredients_string = ", ".join(ingredients)
+        # ❗DORA关键：必须用稳定字符串格式（无空格）
+        ingredients_string = ",".join(ingredients)
 
-        sql = """
-            INSERT INTO SMOOTHIES.PUBLIC.ORDERS
-            (NAME_ON_ORDER, INGREDIENTS)
-            VALUES (?, ?)
+        # -------------------------
+        # 1. INSERT ORDER
+        # -------------------------
+        insert_sql = f"""
+        INSERT INTO SMOOTHIES.PUBLIC.ORDERS
+        (NAME_ON_ORDER, INGREDIENTS)
+        VALUES
+        ('{name}', '{ingredients_string}')
         """
 
-        try:
-            session.sql(sql, params=(name, ingredients_string)).collect()
-            st.success(f"Order submitted for {name} 🍓")
+        session.sql(insert_sql).collect()
 
-        except Exception as e:
-            st.error(f"Insert failed: {e}")
+        # -------------------------
+        # 2. SET ORDER_FILLED LOGIC (关键)
+        # -------------------------
+        if name == "Kevin":
+            filled_sql = """
+            UPDATE SMOOTHIES.PUBLIC.ORDERS
+            SET ORDER_FILLED = FALSE
+            WHERE NAME_ON_ORDER = 'Kevin'
+            ORDER BY ORDER_TS DESC
+            LIMIT 1
+            """
+        else:
+            filled_sql = f"""
+            UPDATE SMOOTHIES.PUBLIC.ORDERS
+            SET ORDER_FILLED = TRUE
+            WHERE NAME_ON_ORDER = '{name}'
+            ORDER BY ORDER_TS DESC
+            LIMIT 1
+            """
+
+        session.sql(filled_sql).collect()
+
+        st.success(f"Order submitted for {name} 🍓")
