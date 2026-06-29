@@ -10,7 +10,7 @@ session = conn.session()
 st.title("Smoothie Orders 🍓")
 
 # -------------------------
-# Load fruits
+# Load fruit list
 # -------------------------
 df = session.sql("""
     SELECT FRUIT_NAME
@@ -30,52 +30,33 @@ ingredients = st.multiselect(
     max_selections=5
 )
 
-st.write("You selected:", ingredients)
+if ingredients:
+    st.write("You selected:", ingredients)
 
 # -------------------------
-# Submit order
+# Submit
 # -------------------------
 if st.button("Submit"):
-
-    if not name or len(ingredients) == 0:
-        st.error("Please enter name and select fruits")
+    if not name or not ingredients:
+        st.error("请确保输入了名字并选择了水果。")
     else:
-
-        # ❗DORA关键：必须用稳定字符串格式（无空格）
         ingredients_string = ",".join(ingredients)
-
-        # -------------------------
-        # 1. INSERT ORDER
-        # -------------------------
-        insert_sql = f"""
-        INSERT INTO SMOOTHIES.PUBLIC.ORDERS
-        (NAME_ON_ORDER, INGREDIENTS)
-        VALUES
-        ('{name}', '{ingredients_string}')
+        
+        # 修复 SQL：只插入 NAME 和 INGREDIENTS
+        # ORDER_UID 使用 DEFAULT (自动序列)
+        # ORDER_FILLED 使用 FALSE (默认值)
+        # ORDER_TS 使用 CURRENT_TIMESTAMP (默认值)
+        
+        sql = """
+            INSERT INTO SMOOTHIES.PUBLIC.ORDERS 
+            (NAME_ON_ORDER, INGREDIENTS)
+            VALUES (?, ?)
         """
-
-        session.sql(insert_sql).collect()
-
-        # -------------------------
-        # 2. SET ORDER_FILLED LOGIC (关键)
-        # -------------------------
-        if name == "Kevin":
-            filled_sql = """
-            UPDATE SMOOTHIES.PUBLIC.ORDERS
-            SET ORDER_FILLED = FALSE
-            WHERE NAME_ON_ORDER = 'Kevin'
-            ORDER BY ORDER_TS DESC
-            LIMIT 1
-            """
-        else:
-            filled_sql = f"""
-            UPDATE SMOOTHIES.PUBLIC.ORDERS
-            SET ORDER_FILLED = TRUE
-            WHERE NAME_ON_ORDER = '{name}'
-            ORDER BY ORDER_TS DESC
-            LIMIT 1
-            """
-
-        session.sql(filled_sql).collect()
-
-        st.success(f"Order submitted for {name} 🍓")
+        
+        try:
+            # 执行查询
+            session.sql(sql, params=(name, ingredients_string)).collect()
+            st.success(f"订单已为 {name} 成功提交! 🍓")
+        except Exception as e:
+            # 打印详细错误方便排查
+            st.error(f"插入失败: {e}")
