@@ -47,22 +47,21 @@ def auto_fill_status(name_on_order):
     else:
         return False
 
-# -------------------------
-# Submit
-# -------------------------
 if st.button("Submit"):
 
     if not name or len(ingredients) == 0:
         st.error("Please enter name and select fruits")
+
     else:
 
-        # 🔥 FIX 1: 保证顺序 + 去多余空格
         ingredients_string = ", ".join([i.strip() for i in ingredients])
 
-        # 🔥 FIX 2: 自动决定 TRUE / FALSE
-        order_filled = auto_fill_status(name)
+        order_filled = False
+        if name in ["Divya", "Xi"]:
+            order_filled = True
 
-        # 🔥 FIX 3: 正确 SQL（Snowflake-safe）
+        session = conn.session()
+
         sql = f"""
         INSERT INTO SMOOTHIES.PUBLIC.ORDERS
         (NAME_ON_ORDER, INGREDIENTS, ORDER_FILLED)
@@ -71,9 +70,8 @@ if st.button("Submit"):
         """
 
         try:
-            conn.query(sql)
-            st.success(f"Order submitted for {name} 🍓")
-            st.write("Filled status:", order_filled)
+            session.sql(sql).collect()   # ⭐关键修复点
+            st.success("Order submitted 🍓")
 
         except Exception as e:
-            st.error(f"Insert failed: {e}")
+            st.error(e)
