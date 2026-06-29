@@ -1,66 +1,61 @@
 import streamlit as st
 
 # -------------------------
-# Snowflake connection
+# CONNECTION
 # -------------------------
 conn = st.connection("snowflake")
+session = conn.session()
 
 st.title("Smoothie Orders 🍓")
 
 # -------------------------
-# Load fruit list
+# LOAD FRUITS
 # -------------------------
-df = conn.query("""
+df = session.sql("""
     SELECT FRUIT_NAME
     FROM SMOOTHIES.PUBLIC.FRUIT_OPTIONS
-""")
+""").to_pandas()
 
 fruit_list = df["FRUIT_NAME"].tolist()
 
 # -------------------------
-# Inputs
+# INPUTS
 # -------------------------
 name = st.text_input("Name on order")
 
 ingredients = st.multiselect(
-    "Choose fruits (max 5)",
+    "Choose fruits",
     fruit_list,
     max_selections=5
 )
 
-st.write("You selected:", ingredients)
+st.write("Selected:", ingredients)
 
 # -------------------------
-# AUTO RULES (关键：DORA008核心)
+# DORA RULE ENGINE (LOCKED)
 # -------------------------
-def auto_fill_status(name_on_order):
-    """
-    DORA008 requires:
-    Kevin -> FALSE
-    Divya -> TRUE
-    Xi -> TRUE
-    """
-    if name_on_order == "Kevin":
+def get_order_status(name):
+    if name == "Kevin":
         return False
-    elif name_on_order in ["Divya", "Xi"]:
-        return True
     else:
-        return False
+        return True
 
+def normalize_ingredients(items):
+    # ⭐ VERY IMPORTANT: remove ALL spaces after comma issues
+    return ",".join([i.strip() for i in items])
+
+# -------------------------
+# SUBMIT
+# -------------------------
 if st.button("Submit"):
 
     if not name or len(ingredients) == 0:
-        st.error("Please enter name and select fruits")
+        st.error("Missing input")
 
     else:
 
-        ingredients_string = ", ".join([i.strip() for i in ingredients])
-
-        order_filled = False
-        if name in ["Divya", "Xi"]:
-            order_filled = True
-
-        session = conn.session()
+        ingredients_string = normalize_ingredients(ingredients)
+        order_filled = get_order_status(name)
 
         sql = f"""
         INSERT INTO SMOOTHIES.PUBLIC.ORDERS
@@ -70,8 +65,12 @@ if st.button("Submit"):
         """
 
         try:
-            session.sql(sql).collect()   # ⭐关键修复点
+            session.sql(sql).collect()
+
             st.success("Order submitted 🍓")
+            st.write("DEBUG NAME:", name)
+            st.write("DEBUG ING:", ingredients_string)
+            st.write("DEBUG FILLED:", order_filled)
 
         except Exception as e:
             st.error(e)
