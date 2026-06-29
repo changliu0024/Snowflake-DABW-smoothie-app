@@ -28,9 +28,15 @@ if st.button("Submit") and name and ingredients:
 
     ingredients_string = ", ".join(ingredients)
 
+    conn = st.connection("snowflake")
+    session = conn.session()
+
     session.sql(
-        "INSERT INTO SMOOTHIES.PUBLIC.ORDERS (NAME_ON_ORDER, INGREDIENTS) VALUES (?, ?)",
-        params=[name, ingredients_string]
+        """
+        INSERT INTO SMOOTHIES.PUBLIC.ORDERS (NAME_ON_ORDER, INGREDIENTS)
+        VALUES (%s, %s)
+        """,
+        params=(name, ingredients_string)
     ).collect()
 
-    st.success("Order submitted! 🍓")
+    st.success("Order submitted 🍓")
