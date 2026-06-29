@@ -1,6 +1,5 @@
 import streamlit as st
 import snowflake.connector
-import pandas as pd
 
 conn = snowflake.connector.connect(
     account=st.secrets["snowflake"]["account"],
@@ -14,20 +13,18 @@ conn = snowflake.connector.connect(
 
 cur = conn.cursor()
 
-st.title("Customize Your Smoothie 🍓")
+st.title("Smoothie Orders 🍓")
 
+# Load fruits
 cur.execute("SELECT FRUIT_NAME FROM SMOOTHIES.PUBLIC.FRUIT_OPTIONS")
 fruit_list = [r[0] for r in cur.fetchall()]
 
-name = st.text_input("Name")
+name = st.text_input("Name on order")
 
-ingredients = st.multiselect("Fruits", fruit_list, max_selections=5)
+ingredients = st.multiselect("Choose fruits", fruit_list, max_selections=5)
 
-ingredients_string = ""
-
-if ingredients:
-    for f in ingredients:
-        ingredients_string += f + ", "
+# DORA SAFE STRING (IMPORTANT)
+ingredients_string = ",".join(ingredients)
 
 if st.button("Submit") and name and ingredients_string:
 
@@ -37,4 +34,4 @@ if st.button("Submit") and name and ingredients_string:
     """
 
     cur.execute(sql)
-    st.success("Order submitted!")
+    st.success("Order submitted ✅")
