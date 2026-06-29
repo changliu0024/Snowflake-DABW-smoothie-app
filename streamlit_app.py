@@ -1,41 +1,34 @@
 import streamlit as st
+import snowflake.connector
 import pandas as pd
 
-# NEW Snowflake connection system
-conn = st.connection("snowflake")
+conn = snowflake.connector.connect(
+    account=st.secrets["snowflake"]["account"],
+    user=st.secrets["snowflake"]["user"],
+    password=st.secrets["snowflake"]["password"],
+    role=st.secrets["snowflake"]["role"],
+    warehouse=st.secrets["snowflake"]["warehouse"],
+    database=st.secrets["snowflake"]["database"],
+    schema=st.secrets["snowflake"]["schema"]
+)
+
+cur = conn.cursor()
 
 st.title("Customize Your Smoothie 🍓")
 
-# -------------------------
-# Load data
-# -------------------------
-df = conn.query("SELECT FRUIT_NAME FROM SMOOTHIES.PUBLIC.FRUIT_OPTIONS")
+cur.execute("SELECT FRUIT_NAME FROM SMOOTHIES.PUBLIC.FRUIT_OPTIONS")
+fruit_list = [r[0] for r in cur.fetchall()]
 
-fruit_list = df["FRUIT_NAME"].tolist()
+name = st.text_input("Name")
 
-# -------------------------
-# UI
-# -------------------------
-name = st.text_input("Name for your order")
+ingredients = st.multiselect("Fruits", fruit_list, max_selections=5)
 
-ingredients = st.multiselect(
-    "Choose fruits:",
-    fruit_list,
-    max_selections=5
-)
-
-# -------------------------
-# Build string
-# -------------------------
 ingredients_string = ""
 
 if ingredients:
     for f in ingredients:
         ingredients_string += f + ", "
 
-# -------------------------
-# Submit
-# -------------------------
 if st.button("Submit") and name and ingredients_string:
 
     sql = f"""
@@ -43,7 +36,5 @@ if st.button("Submit") and name and ingredients_string:
     VALUES ('{name}', '{ingredients_string}')
     """
 
-    conn.query(sql)
+    cur.execute(sql)
     st.success("Order submitted!")
-
-st.write(st.secrets)
