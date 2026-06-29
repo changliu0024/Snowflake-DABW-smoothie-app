@@ -40,7 +40,7 @@ if st.button("Submit"):
     if not name or not ingredients:
         st.error("请确保输入了名字并选择了水果。")
     else:
-        ingredients_string = ", ".join(ingredients)
+        ingredients_string = ",".join(ingredients)
         
         # 修复 SQL：只插入 NAME 和 INGREDIENTS
         # ORDER_UID 使用 DEFAULT (自动序列)
