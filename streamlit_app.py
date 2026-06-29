@@ -24,24 +24,24 @@ fruit_list = df["FRUIT_NAME"].tolist()
 name = st.text_input("Name on order")
 
 ingredients = st.multiselect(
-    "Choose fruits",
+    "Choose fruits (max 5)",
     fruit_list,
     max_selections=5
 )
 
-st.write("Selected:", ingredients)
+st.write("You selected:", ingredients)
 
 # -------------------------
-# DORA RULE ENGINE (LOCKED)
+# FORMAT (IMPORTANT FOR DORA)
 # -------------------------
-def get_order_status(name):
-    if name == "Kevin":
-        return False
-    else:
-        return True
+def format_ingredients(items):
+    return " ".join([i.strip() for i in items])
 
-def normalize_ingredients(items):
-    return ", ".join(items)
+# -------------------------
+# ORDER STATUS RULE (DORA REQUIRED)
+# -------------------------
+def is_order_filled(name):
+    return name in ["Divya", "Xi"]
 
 # -------------------------
 # SUBMIT
@@ -53,23 +53,19 @@ if st.button("Submit"):
 
     else:
 
-        ingredients_string = normalize_ingredients(ingredients)
-        order_filled = get_order_status(name)
+        ingredients_string = format_ingredients(ingredients)
+        order_filled = is_order_filled(name)
 
         sql = f"""
         INSERT INTO SMOOTHIES.PUBLIC.ORDERS
         (NAME_ON_ORDER, INGREDIENTS, ORDER_FILLED)
         VALUES
-        ('{name}', '{ingredients_string}', {str(order_filled).upper()})
+        ('{name}', '{ingredients_string}', {order_filled})
         """
 
         try:
             session.sql(sql).collect()
-
             st.success("Order submitted 🍓")
-            st.write("DEBUG NAME:", name)
-            st.write("DEBUG ING:", ingredients_string)
-            st.write("DEBUG FILLED:", order_filled)
 
         except Exception as e:
-            st.error(e)
+            st.error(f"Insert failed: {e}")
