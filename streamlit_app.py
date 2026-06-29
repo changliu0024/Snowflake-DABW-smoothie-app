@@ -33,20 +33,17 @@ ingredients = st.multiselect(
 if ingredients:
     st.write("You selected:", ingredients)
 
-# ----------------------------
-# Submit (NO re-connection here!)
-# ----------------------------
 if st.button("Submit") and name and ingredients:
 
     ingredients_string = ", ".join(ingredients)
 
-    session.sql(
-        """
-        INSERT INTO SMOOTHIES.PUBLIC.ORDERS
-        (NAME_ON_ORDER, INGREDIENTS)
-        VALUES (?, ?)
-        """,
-        params=[name, ingredients_string]
-    ).collect()
+    session = conn.session()
+
+    sql = f"""
+    INSERT INTO SMOOTHIES.PUBLIC.ORDERS (NAME_ON_ORDER, INGREDIENTS)
+    VALUES ('{name}', '{ingredients_string}')
+    """
+
+    session.sql(sql).collect()
 
     st.success("Order submitted 🍓")
