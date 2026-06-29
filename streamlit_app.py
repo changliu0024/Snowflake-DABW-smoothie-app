@@ -3,6 +3,12 @@ import streamlit as st
 from snowflake.snowpark.context import get_active_session
 from snowflake.snowpark.functions import col
 
+import streamlit as st
+
+conn = st.connection("snowflake")
+
+st.write(conn.query("select current_user()"))
+
 # Title
 st.title("Customize Your Smoothie! :balloon:")
 
