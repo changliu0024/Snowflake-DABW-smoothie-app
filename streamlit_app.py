@@ -37,26 +37,23 @@ if ingredients:
 # Submit
 # -------------------------
 if st.button("Submit"):
+
     if not name or not ingredients:
-        st.error("请确保输入了名字并选择了水果。")
+        st.error("Please enter name and select fruits.")
     else:
-        ingredients_string = ",".join(ingredients)
-        
-        # 修复 SQL：只插入 NAME 和 INGREDIENTS
-        # ORDER_UID 使用 DEFAULT (自动序列)
-        # ORDER_FILLED 使用 FALSE (默认值)
-        # ORDER_TS 使用 CURRENT_TIMESTAMP (默认值)
-        
+
+        # ⭐ DORA关键修复：必须严格加 ", "（逗号+空格）
+        ingredients_string = ", ".join(ingredients)
+
         sql = """
-            INSERT INTO SMOOTHIES.PUBLIC.ORDERS 
+            INSERT INTO SMOOTHIES.PUBLIC.ORDERS
             (NAME_ON_ORDER, INGREDIENTS)
             VALUES (?, ?)
         """
-        
+
         try:
-            # 执行查询
             session.sql(sql, params=(name, ingredients_string)).collect()
-            st.success(f"订单已为 {name} 成功提交! 🍓")
+            st.success(f"Order submitted for {name} 🍓")
+
         except Exception as e:
-            # 打印详细错误方便排查
-            st.error(f"插入失败: {e}")
+            st.error(f"Insert failed: {e}")
