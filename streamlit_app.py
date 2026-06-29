@@ -35,7 +35,10 @@ st.write("You selected:", ingredients)
 # FORMAT (IMPORTANT FOR DORA)
 # -------------------------
 def format_ingredients(items):
-    return " ".join([i.strip() for i in items])
+    result = ''
+    for item in items:
+        result += item + ' '
+    return result
 
 # -------------------------
 # ORDER STATUS RULE (DORA REQUIRED)
