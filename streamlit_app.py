@@ -45,3 +45,5 @@ if st.button("Submit") and name and ingredients_string:
 
     conn.query(sql)
     st.success("Order submitted!")
+
+st.write(st.secrets)
