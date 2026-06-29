@@ -1,56 +1,53 @@
+# Import python packages
 import streamlit as st
+from snowflake.snowpark.functions import col
+import requests
 
-# -------------------------
-# Snowflake connection
-# -------------------------
-conn = st.connection("snowflake")
+# Write directly to the app
+st.title(":cup_with_straw: Customize Your Smoothie :cup_with_straw:")
+st.write(
+    """Choose the fruits you want in your custom Smoothie!
+    """
+)
+name_on_order = st.text_input('Name on Smothie: ')
+st.write('The name on your Smoothie will be: ', name_on_order)
 
-st.title("Smoothie Orders 🍓")
+cnx = st.connection("snowflake")
+session = cnx.session()
 
-# -------------------------
-# Load fruit list
-# -------------------------
-df = conn.query("""
-    SELECT FRUIT_NAME
-    FROM SMOOTHIES.PUBLIC.FRUIT_OPTIONS
-""")
+my_dataframe = session.table(
+    "smoothies.public.fruit_options").select(col('FRUIT_NAME'), col('SEARCH_ON'))
+pd_df = my_dataframe.to_pandas()
 
-fruit_list = df["FRUIT_NAME"].tolist()
 
-# -------------------------
-# Inputs
-# -------------------------
-name = st.text_input("Name on order")
-
-ingredients = st.multiselect(
-    "Choose fruits",
-    fruit_list,
+ingredients_list = st.multiselect(
+    "Choose up to 5 ingredients",
+    my_dataframe,
     max_selections=5
 )
 
-if ingredients:
-    st.write("You selected:", ingredients)
+if ingredients_list:
+    
+    ingredients_string = ''
 
-# -------------------------
-# Submit
-# -------------------------
-if st.button("Submit"):
+    for fruit_chosen in ingredients_list:
+        ingredients_string += fruit_chosen + ' '
 
-    if not name or len(ingredients) == 0:
-        st.error("Please enter name and select fruits")
-    else:
+        search_on=pd_df.loc[pd_df['FRUIT_NAME'] == fruit_chosen, 'SEARCH_ON'].iloc[0]
+        st.write('The search value for ', fruit_chosen,' is ', search_on, '.')
 
-        ingredients_string = ", ".join(ingredients)
+        fruityvice_response = requests.get("https://fruityvice.com/api/fruit/"+search_on)
+        fv_dt = st.dataframe(data=fruityvice_response.json(), use_container_width=True)
 
-        sql = f"""
-        INSERT INTO SMOOTHIES.PUBLIC.ORDERS
-        (NAME_ON_ORDER, INGREDIENTS)
-        VALUES
-        ('{name}', '{ingredients_string}')
-        """
+    st.write(ingredients_string)
 
-        try:
-            conn.query(sql)
-            st.success("Order submitted 🍓")
-        except Exception as e:
-            st.error(f"Error: {e}")
+    my_insert_stmt = """ insert into smoothies.public.orders
+    (ingredients, name_on_order)
+    values ('""" + ingredients_string + """', '""" + name_on_order +"""')"""
+
+    time_to_insert = st.button('Submit Order')
+
+    if time_to_insert:
+        
+        session.sql(my_insert_stmt).collect()
+        st.success('Your Smoothie is ordered, '+name_on_order+'!', icon="✅")
